@@ -18,23 +18,26 @@ else
 	cp ./initialize_db.sh data/mysql
 	MYSQL01=$(docker run -d -v `pwd`/data/mysql:/var/lib/mysql:rw $DOCKER_IMAGE /var/lib/mysql/initialize_db.sh)
 	docker wait $MYSQL01
-	docker logs $MYSQL01
+	# docker logs $MYSQL01
 fi
 MYSQL01=$(docker run -d -v `pwd`/data/mysql:/var/lib/mysql:rw $DOCKER_IMAGE mysqld_safe --server-id=1 --log-bin=mysql-bin --log-slave-updates=1)
 MYSQL01_IP=$(docker inspect $MYSQL01 | grep IPAd | awk -F'"' '{print $4}')
 
-echo $MYSQL01
-echo $MYSQL01_IP
-docker ps
+# echo $MYSQL01
+# echo $MYSQL01_IP
+# docker ps
 
 echo "* Create MySQL02"
 
 rm -rf replica
 mkdir -p replica/data/mysql
+cp Dockerfile *.sh *.cnf replica
 cp ./initialize_db.sh replica/data/mysql
-MYSQL02=$(docker run -d -v `pwd`/replica/data/mysql:/var/lib/mysql:rw $DOCKER_IMAGE /var/lib/mysql/initialize_db.sh) 
+
+MYSQL02=$(docker run -d -v `pwd`/replica/data/mysql:/var/lib/mysql:rw $DOCKER_IMAGE /var/lib/mysql/initialize_db.sh)
 docker wait $MYSQL02
 docker logs $MYSQL02
+
 MYSQL02=$(docker run -d -v `pwd`/replica/data/mysql:/var/lib/mysql:rw $DOCKER_IMAGE mysqld_safe --server-id=2 --log-bin=mysql-bin --log-slave-updates=1)
 MYSQL02_IP=$(docker inspect $MYSQL02 | grep IPAd | awk -F'"' '{print $4}')
 
@@ -61,7 +64,7 @@ echo "* Set MySQL01 as master on MySQL02"
 MYSQL01_Position=$(mysql -uroot -proot -h $MYSQL01_IP -e "show master status \G" | grep Position | awk '{print $2}')
 MYSQL01_File=$(mysql -uroot -proot -h $MYSQL01_IP -e "show master status \G"     | grep File     | awk '{print $2}')
 
-mysql -uroot -proot -h $MYSQL02_IP -AN -e "CHANGE MASTER TO master_host='$MYSQL01_IP', master_port=3306, \
+mysql -uroot -proot -h $MYSQL02_IP -AN -e "CHANGE MASTER TO master_host='master', master_port=3306, \
         master_user='replication', master_password='password', master_log_file='$MYSQL01_File', \
         master_log_pos=$MYSQL01_Position;"
 
