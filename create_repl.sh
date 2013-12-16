@@ -64,7 +64,7 @@ echo "* Set MySQL01 as master on MySQL02"
 MYSQL01_Position=$(mysql -uroot -proot -h $MYSQL01_IP -e "show master status \G" | grep Position | awk '{print $2}')
 MYSQL01_File=$(mysql -uroot -proot -h $MYSQL01_IP -e "show master status \G"     | grep File     | awk '{print $2}')
 
-mysql -uroot -proot -h $MYSQL02_IP -AN -e "CHANGE MASTER TO master_host='master', master_port=3306, \
+mysql -uroot -proot -h $MYSQL02_IP -AN -e "CHANGE MASTER TO master_host='$MYSQL01_IP', master_port=3306, \
         master_user='replication', master_password='password', master_log_file='$MYSQL01_File', \
         master_log_pos=$MYSQL01_Position;"
 
@@ -75,9 +75,9 @@ echo "* Test replication"
 mysql -uroot -proot -h $MYSQL01_IP -e "drop database if exists repltest; create database repltest;"
 mysql -uroot -proot -h $MYSQL01_IP  repltest < repltest.sql
 
-echo "* Sleep 2 seconds, then check that database 'repltest' exists on MySQL02"
+echo "* Sleep 5 seconds, then check that database 'repltest' exists on MySQL02"
 
-sleep 2
+sleep 5
 mysql -uroot -proot -h $MYSQL02_IP -e "show databases; \G" | grep repltest
 if mysql -uroot -proot -h $MYSQL02_IP -e "select title from test where id = 1234 ; " repltest  | grep 'If you see this message, replication is OK' ; then
 	echo "* Everything is OK. Kill the containers"

@@ -5,7 +5,7 @@ Inspired from https://github.com/paulczar/docker-wordpress.
 
 # preparation
 
-1. get two host running
+1. get two hosts running
 2. install docker and mysql-client to both hosts
 3. open ssh port from master to slave
 4. open mysql port (3306) from slave to master
@@ -16,7 +16,7 @@ at the master
 
     $ git clone https://github.com/essa/docker-mysql-repl.git
     $ cd docker-mysql-repl
-    $ sudo docker build -t mysql-repl .
+    $ sudo docker build -t essa/mysql-repl .
     $ sudo ./create_repl.sh
     $ ./copy_replica.sh SLAVE_HOST
     $ sudo ./start_master.sh 
@@ -25,6 +25,7 @@ at the master
 at the slave
 
     $ cd replica
+    $ sudo docker build -t essa/mysql-repl .
     $ sudo ./start_slave.sh MASTER_HOST
     $ mysql -uroot -proot -h 127.0.0.1 -AN repltest
 
