@@ -4,7 +4,6 @@
 # https://github.com/paulczar/docker-wordpress/blob/master/docker
 #
 
-HOST_IP=172.17.42.1
 DOCKER_IMAGE=essa/mysql-repl
 
 echo 
@@ -66,32 +65,26 @@ mysql -uroot -proot -h $MYSQL02_IP -AN -e "CHANGE MASTER TO master_host='$MYSQL0
         master_user='replication', master_password='password', master_log_file='$MYSQL01_File', \
         master_log_pos=$MYSQL01_Position;"
 
-echo "* Set MySQL02 as master on MySQL01"
-
-MYSQL02_Position=$(mysql -uroot -proot -h $MYSQL02_IP -e "show master status \G" | grep Position | awk '{print $2}')
-MYSQL02_File=$(mysql -uroot -proot -h $MYSQL02_IP -e "show master status \G"     | grep File     | awk '{print $2}')
-
-mysql -uroot -proot -h $MYSQL01_IP -AN -e "CHANGE MASTER TO master_host='$MYSQL02_IP', master_port=3306, \
-        master_user='replication', master_password='password', master_log_file='$MYSQL02_File', \
-        master_log_pos=$MYSQL02_Position;"
-
 echo "* Start Slave"
 mysql -uroot -proot -h $MYSQL02_IP -AN -e "start slave;"
 
-mysql -uroot -proot -h $MYSQL01_IP -e "create database repltest;"
-
-echo "* Load up Site SQL data"
-
+echo "* Test replication"
+mysql -uroot -proot -h $MYSQL01_IP -e "drop database if exists repltest; create database repltest;"
 mysql -uroot -proot -h $MYSQL01_IP  repltest < repltest.sql
 
 echo "* Sleep 2 seconds, then check that database 'repltest' exists on MySQL02"
 
 sleep 2
 mysql -uroot -proot -h $MYSQL02_IP -e "show databases; \G" | grep repltest
-mysql -uroot -proot -h $MYSQL02_IP -e "select title from test where id = 1234 ; " repltest 
+if mysql -uroot -proot -h $MYSQL02_IP -e "select title from test where id = 1234 ; " repltest  | grep 'If you see this message, replication is OK' ; then
+	echo "* Everything is OK. Kill the containers"
+	docker kill $MYSQL01
+	docker kill $MYSQL02
+else
+	echo "can't find replicated data on MYSQL02"
+	exit 1
+fi
 
-docker kill $MYSQL01
-docker kill $MYSQL02
 
 
 
